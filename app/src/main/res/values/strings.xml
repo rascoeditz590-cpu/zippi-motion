@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Zippi Motion</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_projects">Projects</string>
+    <string name="nav_editor">Editor</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_ai_chat">AI Assistant</string>
+    <string name="nav_export">Export</string>
+    <string name="new_project">New Project</string>
+    <string name="create_project">Create Project</string>
+    <string name="project_name">Project Name</string>
+    <string name="aspect_ratio">Aspect Ratio</string>
+    <string name="resolution">Resolution</string>
+    <string name="frame_rate">Frame Rate</string>
+    <string name="guest_mode">Continue as Guest</string>
+    <string name="login">Log In</string>
+    <string name="signup">Sign Up</string>
+</resources>
