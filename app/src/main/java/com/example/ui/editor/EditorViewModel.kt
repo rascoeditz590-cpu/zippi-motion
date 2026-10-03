@@ -1,6 +1,6 @@
 package com.example.ui.editor
 
-import androidx.lifecycle.ViewModel
+import import kotlin.math.cos import kotlin.math.sin  androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.KeyframeEntity
 import com.example.data.local.entity.LayerEntity
@@ -250,7 +250,47 @@ class EditorViewModel(
             _selectedLayerId.value = newLayer.id
         }
     }
+private suspend fun saveKf(layerId: String, prop: KeyframeProperty, t: Long, v: Float) {
+        projectRepository.addKeyframe(
+            KeyframeEntity(
+                id = "$layerId:${prop.name}:$t",
+                layerId = layerId,
+                property = prop.name,
+                timeMs = t,
+                value = v
+            )
+        )
+    }
 
+    fun transformLayer(layerId: String, panX: Float, panY: Float, zoom: Float, rotation: Float) {
+        viewModelScope.launch {
+            val lwk = layers.value.firstOrNull { it.layer.id == layerId } ?: return@launch
+            val t = _playheadMs.value
+            val kf = lwk.keyframes
+            fun cur(p: KeyframeProperty, d: Float) =
+                KeyframeInterpolator.interpolateProperty(kf, p, t, d)
+
+            val x = cur(KeyframeProperty.POSITION_X, 0f)
+            val y = cur(KeyframeProperty.POSITION_Y, 0f)
+            val sx = cur(KeyframeProperty.SCALE_X, 1f)
+            val sy = cur(KeyframeProperty.SCALE_Y, 1f)
+            val rot = cur(KeyframeProperty.ROTATION_Z, 0f)
+
+            val rad = Math.toRadians(rot.toDouble())
+            val c = cos(rad).toFloat()
+            val s = sin(rad).toFloat()
+            val dx = panX * sx * c - panY * sy * s
+            val dy = panX * sx * s + panY * sy * c
+
+            saveKf(layerId, KeyframeProperty.POSITION_X, t, x + dx)
+            saveKf(layerId, KeyframeProperty.POSITION_Y, t, y + dy)
+            if (zoom != 1f) {
+                saveKf(layerId, KeyframeProperty.SCALE_X, t, (sx * zoom).coerceIn(0.1f, 10f))
+                saveKf(layerId, KeyframeProperty.SCALE_Y, t, (sy * zoom).coerceIn(0.1f, 10f))
+            }
+            if (rotation != 0f) saveKf(layerId, KeyframeProperty.ROTATION_Z, t, rot + rotation)
+        }
+    }
     fun moveLayer(layerId: String, deltaX: Float, deltaY: Float) {
         viewModelScope.launch {
             val lwk = layers.value.firstOrNull { it.layer.id == layerId } ?: return@launch
