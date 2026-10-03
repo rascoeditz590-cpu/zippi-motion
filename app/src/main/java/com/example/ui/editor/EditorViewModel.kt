@@ -1,6 +1,6 @@
 package com.example.ui.editor
 
-import import kotlin.math.cos import kotlin.math.sin  androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.KeyframeEntity
 import com.example.data.local.entity.LayerEntity
@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class EditorUiState(
     val project: ProjectEntity? = null,
@@ -80,10 +82,9 @@ class EditorViewModel(
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
             val maxDuration = project.value?.durationMs ?: 10000L
-            val stepMs = 33L // ~30 fps tick
+            val stepMs = 33L
             while (_isPlaying.value) {
-                val current = _playheadMs.value
-                val next = current + stepMs
+                val next = _playheadMs.value + stepMs
                 if (next >= maxDuration) {
                     _playheadMs.value = 0L
                 } else {
@@ -111,15 +112,25 @@ class EditorViewModel(
         _timelineZoom.value = zoom.coerceIn(0.5f, 4.0f)
     }
 
-    fun addShapeLayer(shapeType: ShapeType, color: Long) {
+    private fun insertLayer(
+        make: (id: String, track: Int, order: Int, maxDuration: Long) -> LayerEntity
+    ) {
         viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
+            val current = layers.value
+            val track = (current.maxOfOrNull { it.layer.trackIndex } ?: -1) + 1
+            val order = (current.maxOfOrNull { it.layer.orderIndex } ?: -1) + 1
             val maxDuration = project.value?.durationMs ?: 10000L
+            val newLayer = make(UUID.randomUUID().toString(), track, order, maxDuration)
+            projectRepository.addLayer(newLayer)
+            _selectedLayerId.value = newLayer.id
+        }
+    }
 
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+    fun addShapeLayer(shapeType: ShapeType, color: Long) {
+        val start = _playheadMs.value
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = shapeType.displayName,
                 layerType = LayerType.SHAPE.name,
@@ -127,130 +138,96 @@ class EditorViewModel(
                 fillColor = color,
                 strokeColor = 0x00000000,
                 strokeWidth = 0f,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
-                startTimeMs = _playheadMs.value,
-                endTimeMs = (_playheadMs.value + 4000L).coerceAtMost(maxDuration)
+                trackIndex = track,
+                orderIndex = order,
+                startTimeMs = start,
+                endTimeMs = (start + 4000L).coerceAtMost(maxDuration)
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
 
     fun addTextLayer(text: String, fontSize: Float, textColor: Long) {
-        viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
-            val maxDuration = project.value?.durationMs ?: 10000L
-
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+        val start = _playheadMs.value
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = if (text.length > 14) text.take(14) + "..." else text,
                 layerType = LayerType.TEXT.name,
                 textContent = text,
                 fontSize = fontSize,
                 textColor = textColor,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
-                startTimeMs = _playheadMs.value,
-                endTimeMs = (_playheadMs.value + 4000L).coerceAtMost(maxDuration)
+                trackIndex = track,
+                orderIndex = order,
+                startTimeMs = start,
+                endTimeMs = (start + 4000L).coerceAtMost(maxDuration)
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
 
     fun addMediaLayer(uri: String, type: LayerType, name: String) {
-        viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
-            val maxDuration = project.value?.durationMs ?: 10000L
-
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+        val start = _playheadMs.value
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = name,
                 layerType = type.name,
                 sourceUri = uri,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
-                startTimeMs = _playheadMs.value,
-                endTimeMs = (_playheadMs.value + 5000L).coerceAtMost(maxDuration)
+                trackIndex = track,
+                orderIndex = order,
+                startTimeMs = start,
+                endTimeMs = (start + 5000L).coerceAtMost(maxDuration)
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
 
     fun addNullLayer() {
-        viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
-            val maxDuration = project.value?.durationMs ?: 10000L
-
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = "Null Controller",
                 layerType = LayerType.NULL.name,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
+                trackIndex = track,
+                orderIndex = order,
                 startTimeMs = 0L,
                 endTimeMs = maxDuration
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
 
     fun addAdjustmentLayer() {
-        viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
-            val maxDuration = project.value?.durationMs ?: 10000L
-
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = "Adjustment Layer",
                 layerType = LayerType.ADJUSTMENT.name,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
+                trackIndex = track,
+                orderIndex = order,
                 startTimeMs = 0L,
                 endTimeMs = maxDuration
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
 
     fun addGroupLayer() {
-        viewModelScope.launch {
-            val currentLayers = layers.value
-            val maxTrack = currentLayers.maxOfOrNull { it.layer.trackIndex } ?: -1
-            val maxOrder = currentLayers.maxOfOrNull { it.layer.orderIndex } ?: -1
-            val maxDuration = project.value?.durationMs ?: 10000L
-
-            val newLayer = LayerEntity(
-                id = UUID.randomUUID().toString(),
+        insertLayer { id, track, order, maxDuration ->
+            LayerEntity(
+                id = id,
                 projectId = projectId,
                 name = "Group Container",
                 layerType = LayerType.GROUP.name,
-                trackIndex = maxTrack + 1,
-                orderIndex = maxOrder + 1,
+                trackIndex = track,
+                orderIndex = order,
                 startTimeMs = 0L,
                 endTimeMs = maxDuration
             )
-            projectRepository.addLayer(newLayer)
-            _selectedLayerId.value = newLayer.id
         }
     }
-private suspend fun saveKf(layerId: String, prop: KeyframeProperty, t: Long, v: Float) {
+
+    private suspend fun saveKf(layerId: String, prop: KeyframeProperty, t: Long, v: Float) {
         projectRepository.addKeyframe(
             KeyframeEntity(
                 id = "$layerId:${prop.name}:$t",
@@ -267,14 +244,12 @@ private suspend fun saveKf(layerId: String, prop: KeyframeProperty, t: Long, v: 
             val lwk = layers.value.firstOrNull { it.layer.id == layerId } ?: return@launch
             val t = _playheadMs.value
             val kf = lwk.keyframes
-            fun cur(p: KeyframeProperty, d: Float) =
-                KeyframeInterpolator.interpolateProperty(kf, p, t, d)
 
-            val x = cur(KeyframeProperty.POSITION_X, 0f)
-            val y = cur(KeyframeProperty.POSITION_Y, 0f)
-            val sx = cur(KeyframeProperty.SCALE_X, 1f)
-            val sy = cur(KeyframeProperty.SCALE_Y, 1f)
-            val rot = cur(KeyframeProperty.ROTATION_Z, 0f)
+            val x = KeyframeInterpolator.interpolateProperty(kf, KeyframeProperty.POSITION_X, t, 0f)
+            val y = KeyframeInterpolator.interpolateProperty(kf, KeyframeProperty.POSITION_Y, t, 0f)
+            val sx = KeyframeInterpolator.interpolateProperty(kf, KeyframeProperty.SCALE_X, t, 1f)
+            val sy = KeyframeInterpolator.interpolateProperty(kf, KeyframeProperty.SCALE_Y, t, 1f)
+            val rot = KeyframeInterpolator.interpolateProperty(kf, KeyframeProperty.ROTATION_Z, t, 0f)
 
             val rad = Math.toRadians(rot.toDouble())
             val c = cos(rad).toFloat()
@@ -288,39 +263,14 @@ private suspend fun saveKf(layerId: String, prop: KeyframeProperty, t: Long, v: 
                 saveKf(layerId, KeyframeProperty.SCALE_X, t, (sx * zoom).coerceIn(0.1f, 10f))
                 saveKf(layerId, KeyframeProperty.SCALE_Y, t, (sy * zoom).coerceIn(0.1f, 10f))
             }
-            if (rotation != 0f) saveKf(layerId, KeyframeProperty.ROTATION_Z, t, rot + rotation)
+            if (rotation != 0f) {
+                saveKf(layerId, KeyframeProperty.ROTATION_Z, t, rot + rotation)
+            }
         }
     }
-    fun moveLayer(layerId: String, deltaX: Float, deltaY: Float) {
-        viewModelScope.launch {
-            val lwk = layers.value.firstOrNull { it.layer.id == layerId } ?: return@launch
-            val curX = KeyframeInterpolator.interpolateProperty(
-                lwk.keyframes, KeyframeProperty.POSITION_X, _playheadMs.value, defaultValue = 0f
-            )
-            val curY = KeyframeInterpolator.interpolateProperty(
-                lwk.keyframes, KeyframeProperty.POSITION_Y, _playheadMs.value, defaultValue = 0f
-            )
-            val newX = curX + deltaX
-            val newY = curY + deltaY
 
-            // Insert or update keyframe at playhead position
-            val kfX = KeyframeEntity(
-                id = UUID.randomUUID().toString(),
-                layerId = layerId,
-                property = KeyframeProperty.POSITION_X.name,
-                timeMs = _playheadMs.value,
-                value = newX
-            )
-            val kfY = KeyframeEntity(
-                id = UUID.randomUUID().toString(),
-                layerId = layerId,
-                property = KeyframeProperty.POSITION_Y.name,
-                timeMs = _playheadMs.value,
-                value = newY
-            )
-            projectRepository.addKeyframe(kfX)
-            projectRepository.addKeyframe(kfY)
-        }
+    fun moveLayer(layerId: String, deltaX: Float, deltaY: Float) {
+        transformLayer(layerId, deltaX, deltaY, 1f, 0f)
     }
 
     fun deleteSelectedLayer() {
