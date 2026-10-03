@@ -1,9 +1,9 @@
 package com.example.ui.editor
 
-import import androidx.compose.foundation.gestures.detectTransformGesturesandroidx.compose.foundation.background
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +37,6 @@ import com.example.data.model.KeyframeProperty
 import com.example.data.model.LayerType
 import com.example.data.model.ShapeType
 import com.example.ui.shapes.VectorShapeView
-import com.example.ui.theme.KeyframeDiamond
-import com.example.ui.theme.SnappingIndicator
 import com.example.ui.theme.ZippiAmber
 import com.example.ui.theme.ZippiPink
 import kotlin.math.roundToInt
@@ -59,21 +56,15 @@ fun CanvasLayerRenderer(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val canvasWidthPx = constraints.maxWidth.toFloat()
-        val canvasHeightPx = constraints.maxHeight.toFloat()
-
-        // Sort layers by orderIndex to preserve layer stack hierarchy
         val sortedLayers = layers.sortedBy { it.layer.orderIndex }
 
         for (lwk in sortedLayers) {
             val layer = lwk.layer
             val keyframes = lwk.keyframes
 
-            // Visibility & Time window check
             if (!layer.isVisible) continue
             if (playheadMs !in layer.startTimeMs..layer.endTimeMs) continue
 
-            // Evaluate transform values via keyframe interpolation
             val posX = KeyframeInterpolator.interpolateProperty(
                 keyframes, KeyframeProperty.POSITION_X, playheadMs, defaultValue = 0f
             )
@@ -110,16 +101,14 @@ fun CanvasLayerRenderer(
                     .then(
                         if (isSelected && !layer.isLocked) {
                             Modifier.pointerInput(layer.id) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    onMoveLayer(layer.id, dragAmount.x, dragAmount.y)
+                                detectTransformGestures { _, pan, zoom, rotation ->
+                                    onTransformLayer(layer.id, pan.x, pan.y, zoom, rotation)
                                 }
                             }
                         } else Modifier
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Layer Content Render
                 when (layerType) {
                     LayerType.SHAPE -> {
                         val shape = ShapeType.fromString(layer.shapeType ?: ShapeType.RECTANGLE.name)
@@ -166,15 +155,16 @@ fun CanvasLayerRenderer(
                         }
                     }
                     LayerType.VIDEO -> {
-                        Box(
-                            modifier = Modifier
-                                .size(160.dp, 100.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E1B4B))
-                                .border(1.dp, Color(0xFF6366F1), RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.Movie, contentDescription = null, tint = Color(0xFF818CF8))
+                        val src = layer.sourceUri
+                        if (src != null) {
+                            VideoLayerPlayer(
+                                uri = src,
+                                localTimeMs = playheadMs - layer.startTimeMs + layer.inPointMs,
+                                isPlaying = isPlaying,
+                                modifier = Modifier
+                                    .size(200.dp, 120.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
                         }
                     }
                     LayerType.NULL -> {
@@ -197,51 +187,24 @@ fun CanvasLayerRenderer(
                     LayerType.ADJUSTMENT -> {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .size(200.dp)
                                 .background(Color(0x22FFAA00))
                         )
                     }
                     LayerType.AUDIO, LayerType.GROUP -> {
-                        // Invisible on visual canvas
                     }
                 }
 
-                // Selection Box & Transform Handles
                 if (isSelected) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .border(1.5.dp, ZippiPink, RoundedCornerShape(2.dp))
                     ) {
-                        // Corner resize anchor dots
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(ZippiPink)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(ZippiPink)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(ZippiPink)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(ZippiPink)
-                        )
+                        Box(Modifier.align(Alignment.TopStart).size(8.dp).clip(CircleShape).background(ZippiPink))
+                        Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(ZippiPink))
+                        Box(Modifier.align(Alignment.BottomStart).size(8.dp).clip(CircleShape).background(ZippiPink))
+                        Box(Modifier.align(Alignment.BottomEnd).size(8.dp).clip(CircleShape).background(ZippiPink))
                     }
                 }
             }
