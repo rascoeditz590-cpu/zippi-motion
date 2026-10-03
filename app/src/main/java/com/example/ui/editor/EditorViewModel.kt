@@ -1,6 +1,7 @@
 package com.example.ui.editor
-
-import import kotlin.math.cos import kotlin.math.sin  androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModel
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.KeyframeEntity
 import com.example.data.local.entity.LayerEntity
