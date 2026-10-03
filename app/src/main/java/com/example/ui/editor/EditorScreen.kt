@@ -69,7 +69,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.relations.LayerWithKeyframes
 import com.example.data.model.LayerType
-import com.example.data.model.ShapeType
 import com.example.ui.components.AspectRatioBadge
 import com.example.ui.shapes.ShapePickerDialog
 import com.example.ui.theme.KeyframeDiamond
@@ -78,7 +77,6 @@ import com.example.ui.theme.StudioCardBorder
 import com.example.ui.theme.StudioDivider
 import com.example.ui.theme.StudioSurface
 import com.example.ui.theme.StudioSurfaceHighlight
-import com.example.ui.theme.StudioSurfaceVariant
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -112,7 +110,6 @@ fun EditorScreen(
     var showShapePicker by remember { mutableStateOf(false) }
     var showTextDialog by remember { mutableStateOf(false) }
 
-    // Zero-permission Android Photo Picker for Videos
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -121,7 +118,6 @@ fun EditorScreen(
         }
     }
 
-    // Zero-permission Android Photo Picker for Images / PNGs
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -130,7 +126,6 @@ fun EditorScreen(
         }
     }
 
-    // System Audio Picker
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -160,7 +155,6 @@ fun EditorScreen(
             .background(StudioBackground)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        // Workspace Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -199,7 +193,7 @@ fun EditorScreen(
                 )
             }
 
-            IconButton(onClick = { /* Undo in Phase 3 */ }) {
+            IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Undo,
                     contentDescription = "Undo",
@@ -207,7 +201,7 @@ fun EditorScreen(
                 )
             }
 
-            IconButton(onClick = { /* Redo in Phase 3 */ }) {
+            IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Redo,
                     contentDescription = "Redo",
@@ -234,7 +228,6 @@ fun EditorScreen(
             }
         }
 
-        // Viewport / Video Canvas Area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -261,18 +254,18 @@ fun EditorScreen(
                     .border(1.dp, StudioCardBorder, RoundedCornerShape(6.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                // Live Canvas Layer Renderer with transforms and keyframe interpolation!
                 CanvasLayerRenderer(
                     layers = layers,
                     playheadMs = playheadMs,
                     selectedLayerId = selectedLayerId,
                     onSelectLayer = viewModel::selectLayer,
-                    onMoveLayer = viewModel::moveLayer
+                    onMoveLayer = viewModel::moveLayer,
+                    onTransformLayer = viewModel::transformLayer,
+                    isPlaying = isPlaying
                 )
             }
         }
 
-        // Playhead Timecode & Playback Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -292,7 +285,6 @@ fun EditorScreen(
                 fontFamily = FontFamily.Monospace
             )
 
-            // Playback controls
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -327,7 +319,6 @@ fun EditorScreen(
                 }
             }
 
-            // Add Layer Button
             IconButton(
                 onClick = { showAddLayerSheet = true },
                 modifier = Modifier
@@ -345,7 +336,6 @@ fun EditorScreen(
             }
         }
 
-        // Workspace Tab Row
         TabRow(
             selectedTabIndex = activeTab,
             containerColor = StudioSurface,
@@ -383,7 +373,6 @@ fun EditorScreen(
             }
         }
 
-        // Workspace Pane
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -410,7 +399,6 @@ fun EditorScreen(
         }
     }
 
-    // Add Layer Bottom Sheet
     if (showAddLayerSheet) {
         AddLayerBottomSheet(
             onDismiss = { showAddLayerSheet = false },
@@ -440,7 +428,6 @@ fun EditorScreen(
         )
     }
 
-    // Shape Picker Dialog
     if (showShapePicker) {
         ShapePickerDialog(
             onDismiss = { showShapePicker = false },
@@ -450,7 +437,6 @@ fun EditorScreen(
         )
     }
 
-    // Text Layer Dialog
     if (showTextDialog) {
         AddTextLayerDialog(
             onDismiss = { showTextDialog = false },
@@ -478,7 +464,6 @@ fun MultiTrackTimelinePane(
             .fillMaxSize()
             .padding(top = 4.dp)
     ) {
-        // Timeline Header with Ruler & Delete action
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -518,7 +503,6 @@ fun MultiTrackTimelinePane(
             }
         }
 
-        // Multi-track layer items
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -541,199 +525,3 @@ fun MultiTrackTimelinePane(
                 }
             } else {
                 layers.forEach { lwk ->
-                    val layer = lwk.layer
-                    val isSelected = layer.id == selectedLayerId
-                    val type = LayerType.fromString(layer.layerType)
-
-                    val typeColor = when (type) {
-                        LayerType.VIDEO -> TrackVideoColor
-                        LayerType.IMAGE -> Color(0xFF06B6D4)
-                        LayerType.AUDIO -> TrackAudioColor
-                        LayerType.TEXT -> TrackTextColor
-                        LayerType.SHAPE -> TrackShapeColor
-                        LayerType.ADJUSTMENT -> TrackAdjustmentColor
-                        LayerType.NULL -> ZippiAmber
-                        LayerType.GROUP -> ZippiPink
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) StudioSurfaceHighlight else StudioSurface)
-                            .border(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) ZippiPink else StudioCardBorder,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .clickable { onSelectLayer(layer.id) }
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Layer indicator pill & title
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = 4.dp, height = 28.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(typeColor)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = layer.name,
-                                        color = if (isSelected) Color.White else TextPrimary,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1
-                                    )
-                                    Text(
-                                        text = "${layer.layerType} · ${(layer.endTimeMs - layer.startTimeMs) / 1000f}s",
-                                        color = TextMuted,
-                                        fontSize = 10.sp
-                                    )
-                                }
-                            }
-
-                            // Layer quick controls
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (lwk.keyframes.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Tune,
-                                            contentDescription = null,
-                                            tint = KeyframeDiamond,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(2.dp))
-                                        Text(
-                                            text = "${lwk.keyframes.size}",
-                                            color = KeyframeDiamond,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = { onToggleVisibility(layer.id) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (layer.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = "Toggle Visibility",
-                                        tint = if (layer.isVisible) TextSecondary else TextMuted,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { onToggleLock(layer.id) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (layer.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                        contentDescription = "Toggle Lock",
-                                        tint = if (layer.isLocked) ZippiAmber else TextMuted,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun InspectorPane(selectedLayerId: String?) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = if (selectedLayerId != null) "Layer Inspector Active" else "Select a layer to inspect transforms",
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "X, Y, Z, Scale, Rotation, Opacity, Blend Modes & Masks configured for Phase 3 & 4.",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun KeyframePane(selectedLayerId: String?) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Keyframe & Curve Graph Editor",
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "15+ Easing curves & cubic bezier interpolation engine configured in Room schema.",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun ShadersPane() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "OpenGL ES 3.0 Shader Effects",
-                color = TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Blur (20), Color (50+), Light, Distortion & 3D Shaders ready for Phase 5.",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-    }
-}
-
