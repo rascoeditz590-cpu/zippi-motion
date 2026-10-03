@@ -1,6 +1,6 @@
 package com.example.ui.editor
 
-import androidx.compose.foundation.background
+import import androidx.compose.foundation.gestures.detectTransformGesturesandroidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -51,6 +51,8 @@ fun CanvasLayerRenderer(
     selectedLayerId: String?,
     onSelectLayer: (String) -> Unit,
     onMoveLayer: (layerId: String, deltaX: Float, deltaY: Float) -> Unit,
+    onTransformLayer: (String, Float, Float, Float, Float) -> Unit = { _, _, _, _, _ -> },
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
