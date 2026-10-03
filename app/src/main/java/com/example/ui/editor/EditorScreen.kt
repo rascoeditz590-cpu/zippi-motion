@@ -7,7 +7,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,26 +23,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,25 +58,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.local.entity.relations.LayerWithKeyframes
 import com.example.data.model.LayerType
 import com.example.ui.components.AspectRatioBadge
 import com.example.ui.shapes.ShapePickerDialog
-import com.example.ui.theme.KeyframeDiamond
 import com.example.ui.theme.StudioBackground
 import com.example.ui.theme.StudioCardBorder
 import com.example.ui.theme.StudioDivider
 import com.example.ui.theme.StudioSurface
-import com.example.ui.theme.StudioSurfaceHighlight
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.TimelineRuler
-import com.example.ui.theme.TrackAdjustmentColor
-import com.example.ui.theme.TrackAudioColor
-import com.example.ui.theme.TrackShapeColor
-import com.example.ui.theme.TrackTextColor
-import com.example.ui.theme.TrackVideoColor
 import com.example.ui.theme.ZippiAmber
 import com.example.ui.theme.ZippiPink
 import java.util.Locale
@@ -446,82 +428,3 @@ fun EditorScreen(
         )
     }
 }
-
-@Composable
-fun MultiTrackTimelinePane(
-    layers: List<LayerWithKeyframes>,
-    playheadMs: Long,
-    durationMs: Long,
-    selectedLayerId: String?,
-    onSelectLayer: (String?) -> Unit,
-    onSeek: (Long) -> Unit,
-    onToggleVisibility: (String) -> Unit,
-    onToggleLock: (String) -> Unit,
-    onDeleteSelected: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(30.dp)
-                .background(TimelineRuler.copy(alpha = 0.4f))
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onSeek((durationMs / 2).coerceAtLeast(0L)) }
-            ) {
-                Text(
-                    text = "0s        2s        4s        6s        8s       10s",
-                    color = TextMuted,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-
-            if (selectedLayerId != null) {
-                IconButton(
-                    onClick = onDeleteSelected,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .testTag("timeline_delete_layer_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Selected Layer",
-                        tint = Color(0xFFFF5252),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (layers.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Timeline is empty. Tap '+' to add video, images, text, or shapes.",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
-                }
-            } else {
-                layers.forEach { lwk ->
